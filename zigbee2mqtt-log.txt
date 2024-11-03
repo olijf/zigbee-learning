@@ -1,0 +1,141 @@
+(python-venv) olaf@olaf-werkomgeving:~/wpan/wpan-testerij/dataset-generation$ docker compose up
+WARN[0000] /home/olaf/wpan/wpan-testerij/dataset-generation/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion 
+[+] Running 2/0
+ ✔ Container dataset-generation-eclipse-mosquitto-1  Created                                                                                                                                                  0.0s 
+ ✔ Container zigbee2mqtt                             Created                                                                                                                                                  0.0s 
+Attaching to eclipse-mosquitto-1, zigbee2mqtt
+zigbee2mqtt          | Using '/app/data' as data directory
+eclipse-mosquitto-1  | 1730654388: mosquitto version 2.0.18 starting
+eclipse-mosquitto-1  | 1730654388: Config loaded from /mosquitto-no-auth.conf.
+eclipse-mosquitto-1  | 1730654388: Opening ipv4 listen socket on port 1883.
+eclipse-mosquitto-1  | 1730654388: Opening ipv6 listen socket on port 1883.
+eclipse-mosquitto-1  | 1730654388: mosquitto version 2.0.18 running
+zigbee2mqtt          | Starting Zigbee2MQTT without watchdog.
+zigbee2mqtt          | [2024-11-03 18:19:59] error: 	z2m: Error while starting zigbee-herdsman
+zigbee2mqtt          | [2024-11-03 18:19:59] error: 	z2m: Failed to start zigbee
+zigbee2mqtt          | [2024-11-03 18:19:59] error: 	z2m: Check https://www.zigbee2mqtt.io/guide/installation/20_zigbee2mqtt-fails-to-start.html for possible solutions
+zigbee2mqtt          | [2024-11-03 18:19:59] error: 	z2m: Exiting...
+zigbee2mqtt          | [2024-11-03 18:19:59] error: 	z2m: Error: AREQ - ZDO - activeEpRsp after 10000ms
+zigbee2mqtt          |     at Object.start (/app/node_modules/zigbee-herdsman/src/utils/waitress.ts:63:23)
+zigbee2mqtt          |     at ZnpAdapterManager.registerEndpoints (/app/node_modules/zigbee-herdsman/src/adapter/z-stack/adapter/manager.ts:429:49)
+zigbee2mqtt          |     at ZnpAdapterManager.start (/app/node_modules/zigbee-herdsman/src/adapter/z-stack/adapter/manager.ts:94:20)
+zigbee2mqtt          |     at Controller.start (/app/node_modules/zigbee-herdsman/src/controller/controller.ts:129:29)
+zigbee2mqtt          |     at Zigbee.start (/app/lib/zigbee.ts:63:27)
+zigbee2mqtt          |     at Controller.start (/app/lib/controller.ts:139:27)
+zigbee2mqtt          |     at start (/app/index.js:154:5)
+zigbee2mqtt exited with code 0
+zigbee2mqtt          | Starting Zigbee2MQTT without watchdog.
+zigbee2mqtt          | [2024-11-03 18:20:12] error: 	z2m: Error while starting zigbee-herdsman
+zigbee2mqtt          | [2024-11-03 18:20:12] error: 	z2m: Failed to start zigbee
+zigbee2mqtt          | [2024-11-03 18:20:12] error: 	z2m: Check https://www.zigbee2mqtt.io/guide/installation/20_zigbee2mqtt-fails-to-start.html for possible solutions
+zigbee2mqtt          | [2024-11-03 18:20:12] error: 	z2m: Exiting...
+zigbee2mqtt          | [2024-11-03 18:20:12] error: 	z2m: Error: AREQ - ZDO - activeEpRsp after 10000ms
+zigbee2mqtt          |     at Object.start (/app/node_modules/zigbee-herdsman/src/utils/waitress.ts:63:23)
+zigbee2mqtt          |     at ZnpAdapterManager.registerEndpoints (/app/node_modules/zigbee-herdsman/src/adapter/z-stack/adapter/manager.ts:429:49)
+zigbee2mqtt          |     at ZnpAdapterManager.start (/app/node_modules/zigbee-herdsman/src/adapter/z-stack/adapter/manager.ts:94:20)
+zigbee2mqtt          |     at Controller.start (/app/node_modules/zigbee-herdsman/src/controller/controller.ts:129:29)
+zigbee2mqtt          |     at Zigbee.start (/app/lib/zigbee.ts:63:27)
+zigbee2mqtt          |     at Controller.start (/app/lib/controller.ts:139:27)
+zigbee2mqtt          |     at start (/app/index.js:154:5)
+zigbee2mqtt          | Starting Zigbee2MQTT without watchdog.
+zigbee2mqtt          | [2024-11-03 18:20:17] warning: 	z2m: `permit_join` set to  `true` in configuration.yaml.
+zigbee2mqtt          | [2024-11-03 18:20:17] warning: 	z2m: Allowing new devices to join.
+zigbee2mqtt          | [2024-11-03 18:20:17] warning: 	z2m: Set `permit_join` to `false` once you joined all devices.
+eclipse-mosquitto-1  | 1730654418: New connection from 172.20.0.3:33770 on port 1883.
+eclipse-mosquitto-1  | 1730654418: New client connected from 172.20.0.3:33770 as mqttjs_4840a78d (p2, c1, k60).
+zigbee2mqtt          | [2024-11-03 18:20:18] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/state', payload '{"state":"online"}'
+eclipse-mosquitto-1  | 1730654422: New connection from 172.20.0.1:35270 on port 1883.
+eclipse-mosquitto-1  | 1730654422: New client connected from 172.20.0.1:35270 as auto-8FF93FFF-4BD5-9E33-000A-7B34710E2206 (p5, c1, k60).
+zigbee2mqtt          | [2024-11-03 18:20:22] error: 	z2m: Request 'zigbee2mqtt/bridge/request/device/remove' failed with error: 'Device '0x001788010b57c9f2' does not exist'
+zigbee2mqtt          | [2024-11-03 18:20:22] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/device/remove', payload '{"data":{},"error":"Device '0x001788010b57c9f2' does not exist","status":"error"}'
+zigbee2mqtt          | [2024-11-03 18:20:22] error: 	z2m: Entity '0x001788010b57c9f2' is unknown
+zigbee2mqtt          | [2024-11-03 18:20:42] error: 	z2m: Request 'zigbee2mqtt/bridge/request/device/remove' failed with error: 'Device '0x001788010b57c9f2' does not exist'
+zigbee2mqtt          | [2024-11-03 18:20:42] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/device/remove', payload '{"data":{},"error":"Device '0x001788010b57c9f2' does not exist","status":"error"}'
+zigbee2mqtt          | [2024-11-03 18:20:42] error: 	z2m: Entity '0x001788010b57c9f2' is unknown
+zigbee2mqtt          | [2024-11-03 18:21:02] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/event', payload '{"data":{"friendly_name":"0x001788010b57c9f2","ieee_address":"0x001788010b57c9f2"},"type":"device_joined"}'
+zigbee2mqtt          | [2024-11-03 18:21:02] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/event', payload '{"data":{"friendly_name":"0x001788010b57c9f2","ieee_address":"0x001788010b57c9f2","status":"started"},"type":"device_interview"}'
+zigbee2mqtt          | [2024-11-03 18:21:02] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/event', payload '{"data":{"friendly_name":"0x001788010b57c9f2","ieee_address":"0x001788010b57c9f2"},"type":"device_announce"}'
+zigbee2mqtt          | [2024-11-03 18:21:02] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload ''
+zigbee2mqtt          | [2024-11-03 18:21:02] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/device/remove', payload '{"data":{"block":false,"force":false,"id":"0x001788010b57c9f2"},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:21:03] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":true},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:21:03] error: 	z2m: Request 'zigbee2mqtt/bridge/request/device/remove' failed with error: 'Device '0x001788010b57c9f2' does not exist'
+zigbee2mqtt          | [2024-11-03 18:21:03] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/device/remove', payload '{"data":{},"error":"Device '0x001788010b57c9f2' does not exist","status":"error"}'
+zigbee2mqtt          | [2024-11-03 18:21:03] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":false},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:21:03] error: 	z2m: Request 'zigbee2mqtt/bridge/request/device/remove' failed with error: 'Device '0x001788010b57c9f2' does not exist'
+zigbee2mqtt          | [2024-11-03 18:21:03] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/device/remove', payload '{"data":{},"error":"Device '0x001788010b57c9f2' does not exist","status":"error"}'
+zigbee2mqtt          | [2024-11-03 18:21:03] error: 	z2m: Request 'zigbee2mqtt/bridge/request/device/remove' failed with error: 'Device '0x001788010b57c9f2' does not exist'
+zigbee2mqtt          | [2024-11-03 18:21:03] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/device/remove', payload '{"data":{},"error":"Device '0x001788010b57c9f2' does not exist","status":"error"}'
+zigbee2mqtt          | [2024-11-03 18:21:03] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":false},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:21:03] error: 	z2m: Entity '0x001788010b57c9f2' is unknown
+zigbee2mqtt          | [2024-11-03 18:21:24] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":false},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:21:24] error: 	z2m: Entity '0x001788010b57c9f2' is unknown
+zigbee2mqtt          | [2024-11-03 18:21:44] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":false},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:21:44] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":true},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:21:45] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":false},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:21:45] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":false},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:21:45] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":false},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:21:45] error: 	z2m: Request 'zigbee2mqtt/bridge/request/device/remove' failed with error: 'Device '0x001788010b57c9f2' does not exist'
+zigbee2mqtt          | [2024-11-03 18:21:45] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/device/remove', payload '{"data":{},"error":"Device '0x001788010b57c9f2' does not exist","status":"error"}'
+zigbee2mqtt          | [2024-11-03 18:21:46] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":true},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:21:46] error: 	z2m: Entity '0x001788010b57c9f2' is unknown
+zigbee2mqtt          | [2024-11-03 18:21:47] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/event', payload '{"data":{"friendly_name":"0x001788010b57c9f2","ieee_address":"0x001788010b57c9f2"},"type":"device_joined"}'
+zigbee2mqtt          | [2024-11-03 18:21:47] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/event', payload '{"data":{"friendly_name":"0x001788010b57c9f2","ieee_address":"0x001788010b57c9f2","status":"started"},"type":"device_interview"}'
+zigbee2mqtt          | [2024-11-03 18:21:47] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/event', payload '{"data":{"friendly_name":"0x001788010b57c9f2","ieee_address":"0x001788010b57c9f2"},"type":"device_announce"}'
+zigbee2mqtt          | [2024-11-03 18:21:58] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/event', payload '{"data":{"definition":{"description":"Hue smart plug","exposes":[{"features":[{"access":7,"description":"On/off state of the switch","label":"State","name":"state","property":"state","type":"binary","value_off":"OFF","value_on":"ON","value_toggle":"TOGGLE"}],"type":"switch"},{"access":1,"category":"diagnostic","description":"Link quality (signal strength)","label":"Linkquality","name":"linkquality","property":"linkquality","type":"numeric","unit":"lqi","value_max":255,"value_min":0}],"model":"929003050601","options":[{"access":2,"description":"State actions will also be published as 'action' when true (default false).","label":"State action","name":"state_action","property":"state_action","type":"binary","value_off":false,"value_on":true}],"supports_ota":true,"vendor":"Philips"},"friendly_name":"0x001788010b57c9f2","ieee_address":"0x001788010b57c9f2","status":"successful","supported":true},"type":"device_interview"}'
+zigbee2mqtt          | [2024-11-03 18:21:58] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload '{"linkquality":134,"state":"ON"}'
+zigbee2mqtt          | [2024-11-03 18:21:58] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload '{"linkquality":134,"state":"ON"}'
+zigbee2mqtt          | [2024-11-03 18:21:58] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":true},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:21:58] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload '{"linkquality":131,"state":"OFF"}'
+zigbee2mqtt          | [2024-11-03 18:21:59] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":true},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:21:59] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload '{"linkquality":131,"state":"OFF"}'
+zigbee2mqtt          | [2024-11-03 18:21:59] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":true},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:21:59] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":true},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:22:00] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":false},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:22:00] error: 	z2m: Request 'zigbee2mqtt/bridge/request/permit_join' failed with error: 'SREQ '--> AF - dataRequestExt - {"dstaddrmode":2,"dstaddr":"0x000000000000fffd","destendpoint":242,"dstpanid":0,"srcendpoint":242,"clusterid":33,"transid":38,"options":0,"radius":30,"len":6,"data":{"type":"Buffer","data":[25,32,2,11,254,0]}}' failed with status '(0x11: BUFFER_FULL)' (expected '(0x00: SUCCESS)')'
+zigbee2mqtt          | [2024-11-03 18:22:00] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{},"error":"SREQ '--> AF - dataRequestExt - {\"dstaddrmode\":2,\"dstaddr\":\"0x000000000000fffd\",\"destendpoint\":242,\"dstpanid\":0,\"srcendpoint\":242,\"clusterid\":33,\"transid\":38,\"options\":0,\"radius\":30,\"len\":6,\"data\":{\"type\":\"Buffer\",\"data\":[25,32,2,11,254,0]}}' failed with status '(0x11: BUFFER_FULL)' (expected '(0x00: SUCCESS)')","status":"error"}'
+zigbee2mqtt          | [2024-11-03 18:22:00] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload ''
+zigbee2mqtt          | [2024-11-03 18:22:00] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/device/remove', payload '{"data":{"block":false,"force":false,"id":"0x001788010b57c9f2"},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:22:00] error: 	z2m: Entity '0x001788010b57c9f2' is unknown
+zigbee2mqtt          | [2024-11-03 18:22:15] error: 	zh:controller: Interview failed for '0x001788010b57c9f2 with error 'Error: DatabaseEntry with ID '2' does not exist'
+zigbee2mqtt          | [2024-11-03 18:22:20] error: 	z2m: Entity '0x001788010b57c9f2' is unknown
+zigbee2mqtt          | [2024-11-03 18:22:24] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/event', payload '{"data":{"friendly_name":"0x001788010b57c9f2","ieee_address":"0x001788010b57c9f2"},"type":"device_joined"}'
+zigbee2mqtt          | [2024-11-03 18:22:24] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/event', payload '{"data":{"friendly_name":"0x001788010b57c9f2","ieee_address":"0x001788010b57c9f2","status":"started"},"type":"device_interview"}'
+zigbee2mqtt          | [2024-11-03 18:22:24] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/event', payload '{"data":{"friendly_name":"0x001788010b57c9f2","ieee_address":"0x001788010b57c9f2"},"type":"device_announce"}'
+zigbee2mqtt          | [2024-11-03 18:22:25] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/event', payload '{"data":{"definition":{"description":"Hue smart plug","exposes":[{"features":[{"access":7,"description":"On/off state of the switch","label":"State","name":"state","property":"state","type":"binary","value_off":"OFF","value_on":"ON","value_toggle":"TOGGLE"}],"type":"switch"},{"access":1,"category":"diagnostic","description":"Link quality (signal strength)","label":"Linkquality","name":"linkquality","property":"linkquality","type":"numeric","unit":"lqi","value_max":255,"value_min":0}],"model":"929003050601","options":[{"access":2,"description":"State actions will also be published as 'action' when true (default false).","label":"State action","name":"state_action","property":"state_action","type":"binary","value_off":false,"value_on":true}],"supports_ota":true,"vendor":"Philips"},"friendly_name":"0x001788010b57c9f2","ieee_address":"0x001788010b57c9f2","status":"successful","supported":true},"type":"device_interview"}'
+zigbee2mqtt          | [2024-11-03 18:22:25] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload '{"linkquality":134,"state":"ON"}'
+zigbee2mqtt          | [2024-11-03 18:22:25] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload '{"linkquality":134,"state":"ON"}'
+zigbee2mqtt          | [2024-11-03 18:22:25] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload '{"linkquality":131,"state":"OFF"}'
+zigbee2mqtt          | [2024-11-03 18:22:25] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload '{"linkquality":131,"state":"OFF"}'
+zigbee2mqtt          | [2024-11-03 18:22:25] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload '{"linkquality":131,"state":"OFF"}'
+zigbee2mqtt          | [2024-11-03 18:22:26] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":true},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:22:26] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload '{"linkquality":131,"state":"OFF"}'
+zigbee2mqtt          | [2024-11-03 18:22:26] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload '{"linkquality":131,"state":"OFF"}'
+zigbee2mqtt          | [2024-11-03 18:22:26] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":false},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:22:26] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload '{"linkquality":131,"state":"OFF"}'
+zigbee2mqtt          | [2024-11-03 18:22:26] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload ''
+zigbee2mqtt          | [2024-11-03 18:22:26] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/device/remove', payload '{"data":{"block":false,"force":false,"id":"0x001788010b57c9f2"},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:22:27] error: 	z2m: Entity '0x001788010b57c9f2' is unknown
+zigbee2mqtt          | [2024-11-03 18:22:47] error: 	z2m: Entity '0x001788010b57c9f2' is unknown
+zigbee2mqtt          | [2024-11-03 18:23:07] error: 	z2m: Entity '0x001788010b57c9f2' is unknown
+zigbee2mqtt          | [2024-11-03 18:23:27] error: 	z2m: Entity '0x001788010b57c9f2' is unknown
+zigbee2mqtt          | [2024-11-03 18:23:47] error: 	z2m: Entity '0x001788010b57c9f2' is unknown
+zigbee2mqtt          | [2024-11-03 18:24:07] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":true},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:24:07] error: 	z2m: Entity '0x001788010b57c9f2' is unknown
+zigbee2mqtt          | [2024-11-03 18:24:10] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/event', payload '{"data":{"friendly_name":"0x001788010b57c9f2","ieee_address":"0x001788010b57c9f2"},"type":"device_joined"}'
+zigbee2mqtt          | [2024-11-03 18:24:10] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/event', payload '{"data":{"friendly_name":"0x001788010b57c9f2","ieee_address":"0x001788010b57c9f2","status":"started"},"type":"device_interview"}'
+zigbee2mqtt          | [2024-11-03 18:24:10] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/event', payload '{"data":{"friendly_name":"0x001788010b57c9f2","ieee_address":"0x001788010b57c9f2"},"type":"device_announce"}'
+zigbee2mqtt          | [2024-11-03 18:24:20] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/event', payload '{"data":{"definition":{"description":"Hue smart plug","exposes":[{"features":[{"access":7,"description":"On/off state of the switch","label":"State","name":"state","property":"state","type":"binary","value_off":"OFF","value_on":"ON","value_toggle":"TOGGLE"}],"type":"switch"},{"access":1,"category":"diagnostic","description":"Link quality (signal strength)","label":"Linkquality","name":"linkquality","property":"linkquality","type":"numeric","unit":"lqi","value_max":255,"value_min":0}],"model":"929003050601","options":[{"access":2,"description":"State actions will also be published as 'action' when true (default false).","label":"State action","name":"state_action","property":"state_action","type":"binary","value_off":false,"value_on":true}],"supports_ota":true,"vendor":"Philips"},"friendly_name":"0x001788010b57c9f2","ieee_address":"0x001788010b57c9f2","status":"successful","supported":true},"type":"device_interview"}'
+zigbee2mqtt          | [2024-11-03 18:24:20] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload '{"linkquality":131,"state":"ON"}'
+zigbee2mqtt          | [2024-11-03 18:24:20] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload '{"linkquality":131,"state":"ON"}'
+zigbee2mqtt          | [2024-11-03 18:24:20] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":false},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:24:20] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload '{"linkquality":131,"state":"ON"}'
+zigbee2mqtt          | [2024-11-03 18:24:21] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/0x001788010b57c9f2', payload ''
+zigbee2mqtt          | [2024-11-03 18:24:21] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/device/remove', payload '{"data":{"block":false,"force":false,"id":"0x001788010b57c9f2"},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:24:21] error: 	z2m: Entity '0x001788010b57c9f2' is unknown
+zigbee2mqtt          | [2024-11-03 18:24:41] error: 	z2m: Entity '0x001788010b57c9f2' is unknown
+zigbee2mqtt          | [2024-11-03 18:25:01] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":true},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:25:01] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/permit_join', payload '{"data":{"value":false},"status":"ok"}'
+zigbee2mqtt          | [2024-11-03 18:25:01] error: 	z2m: Request 'zigbee2mqtt/bridge/request/device/remove' failed with error: 'Device '0x001788010b57c9f2' does not exist'
+zigbee2mqtt          | [2024-11-03 18:25:01] info: 	z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/device/remove', payload '{"data":{},"error":"Device '0x001788010b57c9f2' does not exist","status":"error"}'
+eclipse-mosquitto-1  | 1730654701: Client auto-8FF93FFF-4BD5-9E33-000A-7B34710E2206 closed its connection.
+^CGracefully stopping... (press Ctrl+C again to force)
