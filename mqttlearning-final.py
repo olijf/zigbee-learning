@@ -8,6 +8,7 @@ from colorama import Fore
 import logging
 
 from aalpy.learning_algs import run_Lstar
+from aalpy.learning_algs import run_KV
 from aalpy.utils import visualize_automaton
 from aalpy.base import SUL
 from aalpy.oracles.StatePrefixEqOracle import StatePrefixEqOracle
@@ -66,6 +67,7 @@ class ZigbeeMqttClient(SUL):
         return "invalid input provided"
         
     def pre(self):
+        self.device_state(DEVICE_ID, "OFF")
         pass
         #self.touchlink_scan()
         #self.touchlink_factory_reset()
@@ -78,6 +80,8 @@ class ZigbeeMqttClient(SUL):
         requests = {
             "turn_on": {"method": self.device_state, "args": [DEVICE_ID, "ON"]},
             "turn_off": {"method": self.device_state, "args": [DEVICE_ID, "OFF"]},
+            "toggle": {"method": self.device_state, "args": [DEVICE_ID, "TOGGLE"]},
+            "get_state": {"method": self.get_device_state, "args": [DEVICE_ID]},
             "permit_join": {"method": self.control_joining, "args": [True]},
             "disallow_join": {"method": self.control_joining, "args": [False]},
             "remove_device": {"method": self.remove_device, "args": [DEVICE_ID]},
@@ -154,14 +158,29 @@ class ZigbeeMqttClient(SUL):
         payload = {"state": state}
         response = self.publish_and_wait(request_topic, response_topic, payload)
         
-        if response and response.get("state") == state:
+        if response and response.get("state") is not None:
             logging.info(f"Device {device_id} turned {state}.")
             time.sleep(1)
-            return f"state: {response.get('state')}"
+            return f"{response.get('state')}"
         else:
             logging.info(f"Failed to turn device {device_id} {state}.")
             time.sleep(1)
-            return ERROR
+            return f"not found"
+        
+    def get_device_state(self, device_id: str):
+        request_topic = f'zigbee2mqtt/{device_id}/get'
+        response_topic = f'zigbee2mqtt/{device_id}'
+        payload = {"state": ""}
+        response = self.publish_and_wait(request_topic, response_topic, payload)
+        
+        if response:
+            logging.info(f"Device {device_id} state: {response.get('state')}.")
+            time.sleep(1)
+            return f"{response.get('state')}"
+        else:
+            logging.info(f"Failed to get device {device_id} state.")
+            time.sleep(1)
+            return f"not found"
     
     def control_joining(self, allow: bool):
         request_topic = 'zigbee2mqtt/bridge/request/permit_join'
@@ -203,16 +222,17 @@ class ZigbeeMqttClient(SUL):
         return "error"
     
     
-alphabet = ["turn_on", "turn_off"]#, "permit_join", "disallow_join"]#, "remove_device"]
+alphabet = ["turn_on", "turn_off", "get_state", "toggle"]#, "permit_join", "disallow_join"]#, "remove_device"]
 sul = ZigbeeMqttClient(broker_address="localhost")
     # Usage example for Zigbee2MQTT client
 
-eq_oracle = StatePrefixEqOracle(alphabet, sul, walks_per_state=10, walk_len=2)
+eq_oracle = StatePrefixEqOracle(alphabet, sul, walks_per_state=4, walk_len=10)
 #eq_oracle = RandomWalkEqOracle(alphabet, sul, num_steps=5)
 
 # run the learning algorithm
 # internal caching is disabled, since we require an error handling for possible non-deterministic behavior
-learned_model = run_Lstar(alphabet, sul, eq_oracle, automaton_type='mealy',cache_and_non_det_check=True, print_level=3)
+#learned_model = run_Lstar(alphabet, sul, eq_oracle, automaton_type='mealy',cache_and_non_det_check=True, print_level=3)
+learned_model = run_KV(alphabet, sul, eq_oracle, automaton_type='mealy', cache_and_non_det_check=True, print_level=3)
 
 # visualize the automaton
 visualize_automaton(learned_model, path="learnedModel.pdf", file_type='pdf')
