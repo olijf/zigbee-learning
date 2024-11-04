@@ -19,7 +19,7 @@ ERROR = "error"
 WAIT_TIME = 1
 
 # Set up console and file logger
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+logging.basicConfig(level=logging.INFO, format=Fore.RESET+'%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
 class ZigbeeMqttClient(SUL):
     def __init__(self, broker_address='localhost'):
@@ -35,7 +35,7 @@ class ZigbeeMqttClient(SUL):
         # Decode and capture the response payload
         payload = json.loads(message.payload.decode("utf-8"))
         self.response = payload
-        logging.info(f"{Fore.GREEN}<--- {message.topic}: {payload}")
+        logging.debug(f"{Fore.GREEN}<--- {message.topic}: {payload}")
         
 
     def publish_and_wait(self, request_topic, response_topic, payload, timeout=20):
@@ -45,7 +45,7 @@ class ZigbeeMqttClient(SUL):
         # Publish the request message
         payload_str = json.dumps(payload)
         self.client.publish(request_topic, payload_str, qos=1)
-        logging.info(f"{Fore.CYAN}--> {request_topic} payload {payload_str}")
+        logging.debug(f"{Fore.CYAN}--> {request_topic} payload {payload_str}")
 
         # Wait for the response
         self.response = None  # Reset previous response
@@ -58,7 +58,7 @@ class ZigbeeMqttClient(SUL):
                 return response
             time.sleep(0.1)  # Avoid busy-waiting
 
-        logging.info(Fore.RED + "Timeout waiting for response")
+        logging.debug(Fore.RED + "Timeout waiting for response")
         self.client.unsubscribe(response_topic)  # Unsubscribe if timeout occurs
         return None
 
@@ -67,9 +67,10 @@ class ZigbeeMqttClient(SUL):
         return "invalid input provided"
         
     def pre(self):
+        logging.info("====  Preparation   ====")
+        self.in_pre = True
+        self.control_joining(True)
         while True:
-            self.in_pre = True
-            self.control_joining(True)
             response = self.get_device_state(DEVICE_ID)
             if response == "OFF":
                 self.device_state(DEVICE_ID, "ON")
@@ -79,11 +80,13 @@ class ZigbeeMqttClient(SUL):
             else:
                 break
         self.in_pre = False
+        logging.info("====      Done      ====")
         pass
         #self.touchlink_scan()
         #self.touchlink_factory_reset()
         
     def post(self):
+        logging.info("____Round Done______")
         #self.restart()
         pass
     
@@ -112,9 +115,9 @@ class ZigbeeMqttClient(SUL):
         response = self.publish_and_wait(request_topic, response_topic, payload)
         
         if response and response.get("state") == "online":
-            logging.info("Restart successful.")
+            logging.info(f"{Fore.MAGENTA}Restart successful.")
         else:
-            logging.info("Restart failed or timed out.")
+            logging.info(f"{Fore.MAGENTA}Restart failed or timed out.")
         return response
     
     def device_state(self, device_id: str, state: str):
@@ -124,11 +127,11 @@ class ZigbeeMqttClient(SUL):
         response = self.publish_and_wait(request_topic, response_topic, payload, timeout=3)
         
         if response and response.get("state") is not None:
-            logging.info(f"Device {device_id} turned {state}.")
+            logging.info(f"{Fore.MAGENTA}Device {device_id} turned {state}.")
             time.sleep(WAIT_TIME)
             return f"{response.get('state')}"
         else:
-            logging.info(f"Failed to turn device {device_id} {state}.")
+            logging.info(f"{Fore.MAGENTA}Failed to turn device {device_id} {state}.")
             return ERROR
         
     def get_device_state(self, device_id: str):
@@ -138,11 +141,11 @@ class ZigbeeMqttClient(SUL):
         response = self.publish_and_wait(request_topic, response_topic, payload, timeout=3)
         
         if response:
-            logging.info(f"Device {device_id} state: {response.get('state')}.")
+            logging.info(f"{Fore.MAGENTA}Device {device_id} state: {response.get('state')}.")
             time.sleep(WAIT_TIME)
             return f"{response.get('state')}"
         else:
-            logging.info(f"Failed to get device {device_id} state.")
+            logging.info(f"{Fore.MAGENTA}Failed to get device {device_id} state.")
             return ERROR
     
     def control_joining(self, allow: bool):
@@ -151,8 +154,7 @@ class ZigbeeMqttClient(SUL):
         payload = {"value": allow}
         response = self.publish_and_wait(request_topic, response_topic, payload)
         if response and response.get("status") == "ok":
-            logging.info(f"Joining {'allowed' if allow else 'disallowed'}.")
-            print(f"{Fore.MAGENTA}permit_joining: {response}")
+            logging.info(f"{Fore.MAGENTA}Joining {'allowed' if allow else 'disallowed'}.")
             time.sleep(WAIT_TIME)
             if not self.in_pre and allow:
                 while self.get_device_state(DEVICE_ID) == ERROR:
@@ -168,10 +170,10 @@ class ZigbeeMqttClient(SUL):
         #z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/touchlink/scan', payload '{"data":{"found":[]},"status":"ok","transaction":"w8djq-14"}'
         result = self.publish_and_wait(request_topic, response_topic, "")
         if result and result.get("status") == "ok":
-            logging.info("Touchlink scan successful.")
+            logging.info(f"{Fore.MAGENTA}Touchlink scan successful.")
             return result.get("data").get("found")
         else:
-            logging.info("Touchlink scan failed or timed out.")
+            logging.info(f"{Fore.MAGENTA}Touchlink scan failed or timed out.")
         
     def touchlink_factory_reset(self, device_id: str=DEVICE_ID, channel: int=11):
         request_topic = 'zigbee2mqtt/bridge/request/touchlink/factory_reset'
@@ -186,8 +188,9 @@ class ZigbeeMqttClient(SUL):
         payload = {"id": device_id}
         response = self.publish_and_wait(request_topic, response_topic, payload, timeout=3)
         if response and response.get("status") == "ok": #response.get("type") == "device_leave"
-            logging.info(f"Device {device_id} removed.")
+            logging.info(f"{Fore.MAGENTA}Device {device_id} removed.")
             return response.get("status")
+        logging.info(f"{Fore.MAGENTA}Failed to remove device {device_id}.")
         return ERROR
     
     
@@ -195,7 +198,7 @@ alphabet = ["turn_on", "turn_off", "get_state", "permit_join", "forbid_join", "r
 sul = ZigbeeMqttClient(broker_address="localhost")
     # Usage example for Zigbee2MQTT client
 
-eq_oracle = StatePrefixEqOracle(alphabet, sul, walks_per_state=4, walk_len=4)
+eq_oracle = StatePrefixEqOracle(alphabet, sul, walks_per_state=14, walk_len=10)
 #eq_oracle = RandomWalkEqOracle(alphabet, sul, num_steps=5)
 
 # run the learning algorithm
