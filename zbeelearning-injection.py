@@ -6,7 +6,7 @@ from scapy.layers.zigbee import ZigBeeBeacon, ZigbeeNWK, ZigbeeSecurityHeader, Z
 from scapy.layers.zigbee import *
 from random import randint
 import logging
-from crypto import CryptoUtils
+from util.crypto import CryptoUtils
 # Now, all logging calls in the application will output to the command line
 logging.basicConfig(
     level=logging.WARNING,
@@ -83,6 +83,7 @@ if __name__ == '__main__':
     conf.dot15d4_protocol = 'zigbee'
     #zcl_read_attributes(0x92e0, 0x1a62, 0x92e0, 63).show()
     #zcl_on_off(0x92e0, 0x1a62, 0x92e0, 223, True).show()
+    dest_addr = 0xDF6B
     ztest_frame = zcl_on_off(0x0, 0x1a62, 0x92e0, frame_counter, False)
     gnuradiosocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     host = '127.0.0.1'
@@ -104,28 +105,3 @@ if __name__ == '__main__':
             frame_counter = randint(0, 255)
             ztest_frame = zcl_on_off(0x0, 0x1a62, 0x92e0, frame_counter, False)     
             gnuradiosocket.sendto(bytes(ztest_frame), (host, port))
-    '''
-    wrpcap('test_frame.pcap', ztest_frame)
-    ztest_frame.show()
-    #ack_frame(None, 223).show()
-    frames = rdpcap('off.pcap')
-    for frame in frames[1:2]:
-        if not frame.fcf_frametype == 2:
-            if frame.haslayer(ZigbeeSecurityHeader):
-                print("Decrypting frame...")
-                print(frame.show())
-                extended_source = frame.getlayer(ZigbeeSecurityHeader).source.to_bytes(8, 'big')
-                print(extended_source.hex(':'))
-                data, status = CryptoUtils.zigbee_packet_decrypt(NWK_KEY, frame, extended_source)
-                if(status):
-                    if data.haslayer(ZigbeeNWKCommandPayload):
-                        print("skipping...")
-                    else:
-                        print(data.show())
-                else:
-                    print("Failed to decrypt")
-            #print(frame.summary())
-        #else:
-        #    print(frame.summary())
-    '''
-    

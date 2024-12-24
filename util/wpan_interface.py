@@ -1,7 +1,7 @@
 import os
 
 class Phy:
-    def __init__(self, source_address: int, initial_channel: int, initialize: bool = True, debug_monitor: bool = False):
+    def __init__(self, source_address: int, initial_channel: int, initialize: bool = True, debug_monitor: bool = False, pan_id=0x1a62):
         '''
         
         
@@ -9,7 +9,7 @@ class Phy:
         
         self.source = source_address
         if initialize:
-            self.phy = self._initialization()
+            self.phy = self._initialization(pan_id)
             self.switch_channel(initial_channel)
         else:
             self.phy = self._find_phy_device()
@@ -25,7 +25,7 @@ class Phy:
         # iwpan phy <phyname> set channel <page> <channel>
         os.system(f"iwpan phy {self.phy} set channel 0 {chan}")
 
-    def _initialization(self) -> str:
+    def _initialization(self, pan_id) -> str:
         #first configure the wpan adapter
         #find the first phy by running iwpan phy
         #on the first line you will see the phy name, use that in the following commands
@@ -33,14 +33,7 @@ class Phy:
             
         print(f"Using phy: {phy}")
         
-        #get the interfaces
-        interfaces = self._get_interfaces()
-        
-        #delete any interfaces that are already there
-        for interface in interfaces:
-            print(f"Deleting {interface}")
-            if os.system(f"iwpan dev {interface} del"):
-                print(f"Deleted {interface}")
+        self._delete_interfaces()
         
         #add a new interface
         print(f"source addres = {self.source}")
@@ -50,6 +43,7 @@ class Phy:
         print(f"source addres = {source_hex}")
         
         os.system(f"iwpan phy {phy} interface add wpan0 type node {source_hex}")
+        os.system(f"iwpan dev wpan0 set pan_id {pan_id}")
         #set the channel to 11
         os.system(f"iwpan phy {phy} set channel 0 11")
         print("Setting up the ip link")
@@ -63,6 +57,7 @@ class Phy:
         return interfaces
 
     def _enable_debug_monitor(self):
+        self._delete_interfaces()
         #can't have two interfaces on the same adapter, so disable the init
         #iwpan phy <phy> interface add mon0 type monitor
         #ip link set mon0 up
@@ -83,6 +78,16 @@ class Phy:
             exit(1)
         return phy
     
+    def _delete_interfaces(self):
+        #get the interfaces
+        interfaces = self._get_interfaces()
+        
+        #delete any interfaces that are already there
+        for interface in interfaces:
+            print(f"Deleting {interface}")
+            if os.system(f"iwpan dev {interface} del"):
+                print(f"Deleted {interface}")
+        
 
 if __name__ == '__main__':
     source = int('00124b001cdd273d', 16)
