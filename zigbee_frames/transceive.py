@@ -4,19 +4,15 @@ from scapy.all import Packet, conf, sendp, AsyncSniffer, sniff
 #from scapy.layers.lightlinkzbee import *
 from scapy.layers.zigbee import *
 from util.wpan_interface import Phy
+from util.crypto import CryptoUtils
 
 
 conf.dot15d4_protocol = 'zigbee'
 conf.debug_match = True
-'''
-print(conf.L2socket(iface="wpan0").LL)
-conf.L2socket(iface="wpan0").LL = ZigbeeNWK
-print(conf.L2socket(iface="wpan0").LL)
+NWK_KEY = bytes.fromhex("31701f12dd93150ec4efce97e381ef06")
 
-print(conf.L2listen(iface="wpan0").LL)
-conf.L2listen(iface="wpan0").LL = ZigbeeNWK
-print(conf.L2listen(iface="wpan0").LL)
-'''
+PHILIPS_TARGET = bytes.fromhex("00:17:88:01:0b:57:c9:f2".replace(":", ""))
+
 class Transceiver:
     @staticmethod
     def process_sniffer_results(results, process_response_func: Callable[[Packet], bool]) -> Packet:
@@ -31,7 +27,11 @@ class Transceiver:
             print("##### Received packet:")
             for packet in results:
                 expected_frame = Dot15d4FCS(packet.do_build())  # have to do this this way otherwise scapy thinks it's an ethernet packet
-                expected_frame.show()
+                expected_frame.summary()
+                if expected_frame.haslayer(ZigbeeSecurityHeader):
+                    decrypted, status = CryptoUtils.zigbee_packet_decrypt(NWK_KEY, expected_frame, PHILIPS_TARGET)
+                    if status:
+                        decrypted.show()
                 if process_response_func(expected_frame):
                     return expected_frame
         return None
@@ -39,7 +39,7 @@ class Transceiver:
     @staticmethod
     def send_and_receive(
         frame: Packet,
-        process_response_func: Callable[[Packet], bool]=lambda x: x.haslayer(ZigbeeAppDataPayload ),
+        process_response_func: Callable[[Packet], bool]=lambda x: x.haslayer(ZigbeeAppDataPayload),
         chan: int=11,
         phy: Phy=None,
         iface: str = "wpan0",
@@ -61,7 +61,7 @@ class Transceiver:
         time.sleep(0.1)
         print(f"Sending on channel {chan}")
         
-        print(f"Sending packet {frame}")
+        print(f"Sending packet {frame} with frame.fc={frame.fc}")
         
         return_answer = None
         

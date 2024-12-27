@@ -43,7 +43,10 @@ class Phy:
         print(f"source addres = {source_hex}")
         
         os.system(f"iwpan phy {phy} interface add wpan0 type node {source_hex}")
+        os.system(f"ip link set wpan0 down")
         os.system(f"iwpan dev wpan0 set pan_id {pan_id}")
+        short_addr = 0x0000
+        os.system(f"iwpan dev wpan0 set short_addr {short_addr}")
         #set the channel to 11
         os.system(f"iwpan phy {phy} set channel 0 11")
         print("Setting up the ip link")
