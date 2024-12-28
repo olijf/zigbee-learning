@@ -1,141 +1,226 @@
 import json
 import time
 import paho.mqtt.client as mqtt
+from paho.mqtt.properties import Properties
+from paho.mqtt.packettypes import PacketTypes
 from colorama import Fore
+#logger
+import logging
 
-def subscribe_function(client: mqtt.Client):
-     topic_lst = ['zigbee2mqtt/#']#,'zigbee2mqtt/philp_hue_light','zigbee2mqtt/philp_hue_light/availability']
-     # - zigbee2mqtt/bridge/state
-     # - zigbee2mqtt/0x001788010b57c9f2
-     # - zigbee2mqtt/0x001788010b57c9f2/availability
-     # - 
-     for topic in topic_lst:
-        client.subscribe(topic,0)
-        print(Fore.RED+ "client subscibr topic : " + topic +" with qos: 0")
+from aalpy.learning_algs import run_Lstar
+from aalpy.learning_algs import run_KV
+from aalpy.utils import visualize_automaton
+from aalpy.base import SUL
+from aalpy.oracles.StatePrefixEqOracle import StatePrefixEqOracle
+from aalpy.oracles.RandomWalkEqOracle import RandomWalkEqOracle
+
+DEVICE_ID = "0x001788010b57c9f2"
+ERROR = "error"
+WAIT_TIME = 1
+
+# Set up console and file logger
+logging.basicConfig(level=logging.INFO, format=Fore.RESET+'%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+
+class ZigbeeMqttClient(SUL):
+    def __init__(self, broker_address='localhost'):
+        super().__init__()
+        self.client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, transport='tcp', protocol=mqtt.MQTTv5)
+        self.client.on_message = self.on_message
+        self.client.connect(broker_address)
+        self.response = None
+        self.client.loop_start()
+        self.connection_error_counter = 0
+
+    def on_message(self, client, userdata, message):
+        # Decode and capture the response payload
+        payload = json.loads(message.payload.decode("utf-8"))
+        self.response = payload
+        logging.debug(f"{Fore.GREEN}<--- {message.topic}: {payload}")
         
-def unsubscribe_function(client: mqtt.Client):
-     topic_lst = ['test/hello','test/asset','test']
-     client.unsubscribe(topic_lst)
-     print(Fore.GREEN+"client unsubscirbe topic: "+topic_lst)
-     
-def publish_function(client: mqtt.Client, deviceId: str=0x001788010b57c9f2):
-    # zigbee2mqtt/bridge/request/permit_join zigbee2mqtt/bridge/response/touchlink/scan zigbee2mqtt/0x001788010b57c9f2 ON OFF
-    topic = 'zigbee2mqtt/' + deviceId +'/set'
-    dic_payload_on = {"state":"ON"}
-    dic_payload_off = {"state":"OFF"}
-    dic_payload_toggle = {"state":"TOGGLE"}
+
+    def publish_and_wait(self, request_topic, response_topic, payload, timeout=20):
+        # Subscribe to the expected response topic
+        self.client.subscribe(response_topic)
+        
+        # Publish the request message
+        payload_str = json.dumps(payload)
+        self.client.publish(request_topic, payload_str, qos=1)
+        logging.debug(f"{Fore.CYAN}--> {request_topic} payload {payload_str}")
+
+        # Wait for the response
+        self.response = None  # Reset previous response
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            if self.response is not None:
+                response = self.response
+                self.response = None  # Clear for future calls
+                self.client.unsubscribe(response_topic)  # Unsubscribe after receiving response
+                return response
+            time.sleep(0.1)  # Avoid busy-waiting
+
+        logging.debug(Fore.RED + "Timeout waiting for response")
+        self.client.unsubscribe(response_topic)  # Unsubscribe if timeout occurs
+        return None
+
+    # Zigbee2MQTT-specific methods
+    def default(self):
+        return "invalid input provided"
+        
+    def pre(self):
+        logging.info("====  Preparation   ====")
+        self.in_pre = True
+        self.control_joining(True)
+        while True:
+            response = self.get_device_state(DEVICE_ID)
+            if response == "OFF":
+                self.device_state(DEVICE_ID, "ON")
+                break
+            elif response == ERROR:
+                time.sleep(8)
+            else:
+                break
+        self.in_pre = False
+        logging.info("====      Done      ====")
+        pass
+        #self.touchlink_scan()
+        #self.touchlink_factory_reset()
+        
+    def post(self):
+        logging.info("____Round Done______")
+        #self.restart()
+        pass
     
-    payload_on = json.dumps(dic_payload_on)
-    payload_off = json.dumps(dic_payload_off)
-    payload_toggle = json.dumps(dic_payload_toggle)
-    qos = 0
-    retain = False
-    client.publish(topic, payload_toggle, qos, retain)
-    print(Fore.BLUE+"client publish topic: "+topic+" with payload: "+payload_toggle+" with qos: "+str(qos)+" with retain: "+str(retain))
-
-def touchlinker_function(client: mqtt.Client):
-    topic = 'zigbee2mqtt/bridge/request/permit_join'
-    dic_payload = {"value":"true"}
-    payload = json.dumps(dic_payload)
-    qos = 0
-    retain = False
-    client.publish(topic, payload, qos, retain)
-    print(Fore.BLUE+"client publish topic: "+topic+" with payload: "+payload+" with qos: "+str(qos)+" with retain: "+str(retain))
-
-def allow_join(client: mqtt.Client):
-    topic = 'zigbee2mqtt/bridge/request/permit_join'
-    dic_payload = {"value":"true"}
-    payload = json.dumps(dic_payload)
-    qos = 0
-    retain = False
-    client.publish(topic, payload, qos, retain)
-    print(Fore.BLUE+"client publish topic: "+topic+" with payload: "+payload+" with qos: "+str(qos)+" with retain: "+str(retain))
+    def step(self, letter):
+        requests = {
+            "turn_on": {"method": self.device_state, "args": [DEVICE_ID, "ON"]},
+            "turn_off": {"method": self.device_state, "args": [DEVICE_ID, "OFF"]},
+            "toggle": {"method": self.device_state, "args": [DEVICE_ID, "TOGGLE"]},
+            "get_state": {"method": self.get_device_state, "args": [DEVICE_ID]},
+            "permit_join": {"method": self.control_joining, "args": [True]},
+            "forbid_join": {"method": self.control_joining, "args": [False]},
+            "remove_device": {"method": self.remove_device, "args": [DEVICE_ID]},
+        }
+        
+        request = requests.get(letter, {"method": self.default})
+        output = request["method"](*request["args"])
+        return output
     
-def disallow_join(client: mqtt.Client):
-    topic = 'zigbee2mqtt/bridge/request/permit_join'
-    dic_payload = {"value":"false"}
-    payload = json.dumps(dic_payload)
-    qos = 0
-    retain = False
-    client.publish(topic, payload, qos, retain)
-    print(Fore.BLUE+"client publish topic: "+topic+" with payload: "+payload+" with qos: "+str(qos)+" with retain: "+str(retain))
+    # Device Control Functions
     
-def touchlink_scan(client: mqtt.Client):
-    topic = 'zigbee2mqtt/bridge/request/touchlink/scan'
-    qos = 0
-    retain = False
-    client.publish(topic, None, qos, retain)
-    print(Fore.BLUE+"client publish topic: "+topic+" with payload: empty with qos: "+str(qos)+" with retain: "+str(retain))
-
-def touchlink_factory_reset(client: mqtt.Client, device_id: str, channel: int):
-    topic = 'zigbee2mqtt/bridge/request/touchlink/factory_reset'
-    #{"ieee_address": "0x12345678", "channel": 12}
-    dic_payload = {"ieee_address":device_id, "channel":channel}
-    payload = json.dumps(dic_payload)
-    qos = 0
-    retain = False
-    client.publish(topic, payload, qos, retain)
-    print(Fore.BLUE+"client publish topic: "+topic+" with payload: "+payload+" with qos: "+str(qos)+" with retain: "+str(retain))
-
-def remove_device(client: mqtt.Client, device_id: str):
-    #zigbee2mqtt/bridge/request/device/remove
-    topic = 'zigbee2mqtt/bridge/request/device/remove'
-    dic_payload = {"id":device_id}
-    payload = json.dumps(dic_payload)
-    qos = 0
-    retain = False
-    client.publish(topic, payload, qos, retain)
-    print(Fore.BLUE+"client publish topic: "+topic+" with payload: "+payload+" with qos: "+str(qos)+" with retain: "+str(retain))
+    def restart(self):
+        request_topic = 'zigbee2mqtt/bridge/request/restart'
+        #response_topic = 'zigbee2mqtt/bridge/response/restart'
+        response_topic = 'zigbee2mqtt/bridge/state'
+        payload = {}
+        response = self.publish_and_wait(request_topic, response_topic, payload)
+        
+        if response and response.get("state") == "online":
+            logging.info(f"{Fore.MAGENTA}Restart successful.")
+        else:
+            logging.info(f"{Fore.MAGENTA}Restart failed or timed out.")
+        return response
     
-def on_connect(client, userdata, flags, rc):
-    print("Connected with result code "+str(rc))
-    # client.subscribe("zigbee2mqtt/#")
-    # client.subscribe("zigbee2mqtt/philp_hue_light
+    def device_state(self, device_id: str, state: str):
+        request_topic = f'zigbee2mqtt/{device_id}/set'
+        response_topic = f'zigbee2mqtt/{device_id}'
+        payload = {"state": state}
+        response = self.publish_and_wait(request_topic, response_topic, payload, timeout=3)
+        
+        if response and response.get("state") is not None:
+            logging.info(f"{Fore.MAGENTA}Device {device_id} turned {state}.")
+            time.sleep(WAIT_TIME)
+            return f"{response.get('state')}"
+        else:
+            logging.info(f"{Fore.MAGENTA}Failed to turn device {device_id} {state}.")
+            return ERROR
+        
+    def get_device_state(self, device_id: str):
+        request_topic = f'zigbee2mqtt/{device_id}/get'
+        response_topic = f'zigbee2mqtt/{device_id}'
+        payload = {"state": ""}
+        response = self.publish_and_wait(request_topic, response_topic, payload, timeout=3)
+        
+        if response:
+            logging.info(f"{Fore.MAGENTA}Device {device_id} state: {response.get('state')}.")
+            time.sleep(WAIT_TIME)
+            return f"{response.get('state')}"
+        else:
+            logging.info(f"{Fore.MAGENTA}Failed to get device {device_id} state.")
+            return ERROR
+    
+    def control_joining(self, allow: bool):
+        request_topic = 'zigbee2mqtt/bridge/request/permit_join'
+        response_topic = 'zigbee2mqtt/bridge/response/permit_join'
+        payload = {"value": allow}
+        response = self.publish_and_wait(request_topic, response_topic, payload)
+        if response and response.get("status") == "ok":
+            logging.info(f"{Fore.MAGENTA}Joining {'allowed' if allow else 'disallowed'}.")
+            time.sleep(WAIT_TIME)
+            if not self.in_pre and allow:
+                while self.get_device_state(DEVICE_ID) == ERROR:
+                    time.sleep(8)
+                return f"{response.get('data').get('value')}"
+            else:
+                return f"{response.get('data').get('value')}"
+        return ERROR
+        
+    def touchlink_scan(self):
+        request_topic = 'zigbee2mqtt/bridge/request/touchlink/scan'
+        response_topic = 'zigbee2mqtt/bridge/response/touchlink/scan'
+        #z2m:mqtt: MQTT publish: topic 'zigbee2mqtt/bridge/response/touchlink/scan', payload '{"data":{"found":[]},"status":"ok","transaction":"w8djq-14"}'
+        result = self.publish_and_wait(request_topic, response_topic, "")
+        if result and result.get("status") == "ok":
+            logging.info(f"{Fore.MAGENTA}Touchlink scan successful.")
+            return result.get("data").get("found")
+        else:
+            logging.info(f"{Fore.MAGENTA}Touchlink scan failed or timed out.")
+        
+    def touchlink_factory_reset(self, device_id: str=DEVICE_ID, channel: int=11):
+        request_topic = 'zigbee2mqtt/bridge/request/touchlink/factory_reset'
+        response_topic = 'zigbee2mqtt/bridge/response/touchlink/factory_reset'
+        payload = {"ieee_address": device_id, "channel": channel}
+        return self.publish_and_wait(request_topic, response_topic, payload)
+        
+    def remove_device(self, device_id: str=DEVICE_ID):
+        request_topic = 'zigbee2mqtt/bridge/request/device/remove'
+        response_topic = 'zigbee2mqtt/bridge/response/device/remove'
+        #response_topic = 'zigbee2mqtt/bridge/event'
+        payload = {"id": device_id}
+        response = self.publish_and_wait(request_topic, response_topic, payload, timeout=3)
+        if response and response.get("status") == "ok": #response.get("type") == "device_leave"
+            logging.info(f"{Fore.MAGENTA}Device {device_id} removed.")
+            return response.get("status")
+        logging.info(f"{Fore.MAGENTA}Failed to remove device {device_id}.")
+        return ERROR
+    
+    
+alphabet = ["turn_on", "turn_off", "get_state"]#, "permit_join", "forbid_join", "remove_device"]#"toggle", ]
+sul = ZigbeeMqttClient(broker_address="localhost")
+    # Usage example for Zigbee2MQTT client
 
-def on_message(client, userdata, msg):
-    print(Fore.CYAN + msg.topic+" "+str(msg.payload))
-    # print("message received ", str(msg.payload.decode("utf-8")))
-    # print("message topic=", msg.topic)
-    # print("message qos=", msg.qos)
-    # print("message retain flag=", msg.retain)
+eq_oracle = StatePrefixEqOracle(alphabet, sul, walks_per_state=2, walk_len=2)
+#eq_oracle = RandomWalkEqOracle(alphabet, sul, num_steps=5)
 
-def on_disconnect(client, userdata, rc):
-    print("client disconnect")
-    print("rc: " + str(rc))
-    client.loop_stop()
-     
-client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1, transport='tcp')
-# client.username_pw_set('flashmq')
+# run the learning algorithm
+# internal caching is disabled, since we require an error handling for possible non-deterministic behavior
+learned_model = run_Lstar(alphabet, sul, eq_oracle, automaton_type='mealy',cache_and_non_det_check=True, print_level=3)
+#learned_model = run_KV(alphabet, sul, eq_oracle, automaton_type='mealy', cache_and_non_det_check=True, print_level=3)
 
-# may need bind the client to 10.0.47.1 which is the veth5 ip
-# test with local
-# client.connect("0.0.0.0", 1883, 60)
-# run with fuzzer
-
-client.on_connect = on_connect
-client.on_message = on_message
-client.on_disconnect = on_disconnect
-# client.on_disconnect = on_disconnect
-client.connect("127.0.0.1", 1883, 60)
-subscribe_function(client)
-client.loop_start()
+# visualize the automaton
+visualize_automaton(learned_model, path="learnedModel.pdf", file_type='pdf')
 
 try:
-    while 1:
-        #publish_function(client)
-        #touchlink_scan(client)
-        touchlink_factory_reset(client, "0x001788010b57c9f2", 11)
-        time.sleep(1)
-except KeyboardInterrupt:
-    client.disconnect()
-    print("client disconnect")
-    # client.loop_forever()
-# subscribe_function(client)
-'''
-while 1:
-     publish_function(client)
-    #  on_message(client)
-     time.sleep(1)
+    # Restart the Zigbee bridge and wait for confirmation
+    #result = zigbee_client.restart()
+    #result = zigbee_client.touchlink_scan()
+    result = sul.device_state("0x001788010b57c9f2", "TOGGLE")
+    #result = zigbee_client.control_joining(True)
+    #result = zigbee_client.touchlink_factory_reset("0x001788010b57c9f2", 11)
+    #result = zigbee_client.remove_device("0x001788010b57c9f2")
+    if result:
+        logging.info(f"response: {result}")
 
-client.loop_forever()
-'''
+except KeyboardInterrupt:
+    sul.client.disconnect()
+    sul.client.loop_stop()
+    logging.info("Client disconnected")
