@@ -1,4 +1,5 @@
 import os
+import logging
 
 class Phy:
     def __init__(self, source_address: int, initial_channel: int, initialize: bool = True, debug_monitor: bool = False, pan_id=0x1a62):
@@ -21,7 +22,7 @@ class Phy:
         return self.phy
     
     def switch_channel(self, chan):
-        print(f"Switching to channel {chan}")
+        logging.info(f"Switching to channel {chan}")
         # iwpan phy <phyname> set channel <page> <channel>
         os.system(f"iwpan phy {self.phy} set channel 0 {chan}")
 
@@ -31,16 +32,16 @@ class Phy:
         #on the first line you will see the phy name, use that in the following commands
         phy = self._find_phy_device()
             
-        print(f"Using phy: {phy}")
+        logging.info(f"Using phy: {phy}")
         
         self._delete_interfaces()
         
         #add a new interface
-        print(f"source addres = {self.source}")
+        logging.debug(f"source addres = {self.source}")
         #convert the source address to hex seperated by :
         source_hex = self.source.to_bytes(8, 'big').hex(':')
         
-        print(f"source addres = {source_hex}")
+        logging.info(f"source addres = {source_hex}")
         
         os.system(f"iwpan phy {phy} interface add wpan0 type node {source_hex}")
         os.system(f"ip link set wpan0 down")
@@ -49,7 +50,7 @@ class Phy:
         os.system(f"iwpan dev wpan0 set short_addr {short_addr}")
         #set the channel to 11
         os.system(f"iwpan phy {phy} set channel 0 11")
-        print("Setting up the ip link")
+        logging.info("Setting up the ip link")
         #bring the interface up
         os.system(f"ip link set wpan0 up")
         return phy
@@ -67,8 +68,8 @@ class Phy:
         os.system(f"iwpan phy {self.phy} interface add monitor%d type monitor")
         monitors = [iface for iface in self._get_interfaces() if iface.startswith("monitor") ]
         
-        print(f"Monitors: {' '.join(monitors)}")
-        print(f"Enabling monitor {monitors[0]}")
+        logging.debug(f"Monitors: {' '.join(monitors)}")
+        logging.debug(f"Enabling monitor {monitors[0]}")
         os.system(f"ip link set {monitors[0]} up")
     
     def _find_phy_device(self):
@@ -77,7 +78,7 @@ class Phy:
         try:
             phy = output.split("\n")[0].split(" ")[1]
         except IndexError:
-            print("No phy found, are you sure you have plugged in the wpan stick?")
+            logging.error("No phy found, are you sure you have plugged in the wpan stick?")
             exit(1)
         return phy
     
@@ -87,9 +88,9 @@ class Phy:
         
         #delete any interfaces that are already there
         for interface in interfaces:
-            print(f"Deleting {interface}")
+            logging.debug(f"Deleting {interface}")
             if os.system(f"iwpan dev {interface} del"):
-                print(f"Deleted {interface}")
+                logging.debug(f"Deleted {interface}")
         
 
 if __name__ == '__main__':

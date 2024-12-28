@@ -5,10 +5,12 @@ from scapy.all import Packet, conf, sendp, AsyncSniffer, sniff
 from scapy.layers.zigbee import *
 from util.wpan_interface import Phy
 from util.crypto import CryptoUtils
+import logging
 
 
 conf.dot15d4_protocol = 'zigbee'
 conf.debug_match = True
+#conf.verb = 0
 NWK_KEY = bytes.fromhex("31701f12dd93150ec4efce97e381ef06")
 
 PHILIPS_TARGET = bytes.fromhex("00:17:88:01:0b:57:c9:f2".replace(":", ""))
@@ -37,9 +39,9 @@ class Transceiver:
         """
         if phy:
             phy.switch_channel(chan)
-            print(f"Sending on channel {chan}")
+            logging.debug(f"Sending on channel {chan}")
         
-        print(f"Sending packet {frame.summary()} with frame.fc={frame.fc}")
+        logging.debug(f"Sending packet {frame.summary()} with frame.fc={frame.fc}")
         
         return_answer = None
         
@@ -47,13 +49,13 @@ class Transceiver:
             sniffer = AsyncSniffer(iface=iface)
             sniffer.start()
         
-        sendp(frame, iface=iface)  # can't use srp because we are not using ethernet
+        sendp(frame, iface=iface, verbose=0)  # can't use srp because we are not using ethernet
         time.sleep(sleep_time)  # sleep to give devices time to respond
         
         if not sleep_time < 0.1:
             sniffer.stop()
             if len(sniffer.results) > 0:
-                print("##### Received packets:")
+                logging.debug("##### Received packets:")
                 for packet in sniffer.results:
                     expected_frame = Dot15d4(packet.do_build())  # have to do this this way otherwise scapy thinks it's an ethernet packet
                     if process_response_func(expected_frame, transaction_sequence_number):
@@ -79,11 +81,11 @@ class Transceiver:
         if phy:
             phy.switch_channel(chan)
         time.sleep(0.1)
-        print(f"Receiving on channel {chan}")
+        logging.debug(f"Receiving on channel {chan}")
         
         return_answer = None
         
-        sniff(iface=iface, prn=lambda x: Dot15d4FCS(x.do_build()).summary(), store=False, timeout=15)
+        sniff(iface=iface, prn=lambda x: Dot15d4(x.do_build()).summary(), store=False, timeout=15)
         
         return return_answer
     

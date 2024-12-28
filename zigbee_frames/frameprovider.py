@@ -3,6 +3,7 @@ from scapy.all import Packet
 from scapy.layers.dot15d4 import Dot15d4, Dot15d4Data
 from scapy.layers.zigbee import ZigbeeNWK, ZigbeeSecurityHeader, ZigbeeAppDataPayload, ZigbeeClusterLibrary, ZCLGeneralReadAttributes, ZCLGeneralReadAttributesResponse, ZCLReadAttributeStatusRecord, ZigbeeNWKCommandPayload
 from util.crypto import CryptoUtils
+import logging
 
 class FrameProvider:
     def __init__(self):
@@ -17,15 +18,15 @@ class FrameProvider:
     
     def set_security_frame_counter(self, counter: int):
         self._zigbee_sec_frame_counter = counter
-        print(f"Frame counter set to {counter}")
+        logging.debug(f"Frame counter set to {counter}")
     
     def set_extended_source(self, extended_source: bytes):
         self._extended_source = extended_source
-        print(f"Extended source set to {extended_source.hex(':')}")
+        logging.debug(f"Extended source set to {extended_source.hex(':')}")
     
     def set_nwk_key(self, key: bytes):
         self._nwk_key = key
-        print(f"Network key set to {key.hex()}")
+        logging.debug(f"Network key set to {key.hex()}")
         
     def dot15d4_data_header(self, src_addr, dst_pan_id, dst_addr, ackreq=True):
         self._dot15d4_sequence_number = (self._dot15d4_sequence_number + 1) % 256
