@@ -19,13 +19,13 @@ class Transceiver:
     @staticmethod
     def send_and_receive(
         frame: Packet,
-        process_response_func: Callable[[Packet, int], bool]=lambda x, _: x.haslayer(ZigbeeAppDataPayload),
+        process_response_func: Callable[[Packet, int], Tuple[bool, Packet]]=lambda x, _: (x.haslayer(ZigbeeAppDataPayload), x),
         chan: int=11,
         phy: Phy=None,
         iface: str = "wpan0",
         sleep_time: float = 1.0,
         transaction_sequence_number: int = 0
-    ) -> Tuple[Packet, int]:
+    ) -> Tuple[Packet]:
         """
         Generic function to send a packet and receive a response.
         
@@ -58,8 +58,9 @@ class Transceiver:
                 logging.debug("##### Received packets:")
                 for packet in sniffer.results:
                     expected_frame = Dot15d4(packet.do_build())  # have to do this this way otherwise scapy thinks it's an ethernet packet
-                    if process_response_func(expected_frame, transaction_sequence_number):
-                        return expected_frame
+                    answers, decoded = process_response_func(expected_frame, transaction_sequence_number)
+                    if answers:
+                        return decoded
             
         
         return return_answer

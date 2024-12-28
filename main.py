@@ -1,19 +1,28 @@
 from random import randint
 from zigbee_frames.transceive import Transceiver
 from util.wpan_interface import Phy
-from scapy.all import conf, CacheInstance, Packet, sniff, sendp, srp1
-from scapy.layers.dot15d4 import Dot15d4, Dot15d4Beacon, Dot15d4FCS, Dot15d4Data, Dot15d4Ack
-from scapy.layers.zigbee import ZigBeeBeacon, ZigbeeNWK, ZigbeeSecurityHeader, ZigbeeAppDataPayload, ZigbeeClusterLibrary, ZCLGeneralReadAttributes, ZCLGeneralReadAttributesResponse, ZCLReadAttributeStatusRecord, ZigbeeNWKCommandPayload
+from scapy.all import Packet, sendp
+from scapy.layers.zigbee import ZigbeeNWK, ZigbeeClusterLibrary, ZCLGeneralReadAttributesResponse, ZCLReadAttributeStatusRecord, ZCLGeneralDefaultResponse
 from util.crypto import CryptoUtils
 from zigbee_frames.frameprovider import FrameProvider
 from threading import Thread
 import logging
 from colorama import Fore
 import time
+from typing import Tuple
+
+from aalpy.learning_algs import run_Lstar
+from aalpy.learning_algs import run_KV
+from aalpy.utils import visualize_automaton
+from aalpy.base import SUL
+from aalpy.oracles.StatePrefixEqOracle import StatePrefixEqOracle
+from aalpy.oracles.RandomWalkEqOracle import RandomWalkEqOracle
+
 
 # Set up console logger
 logging.basicConfig(level=logging.INFO, format=Fore.RESET+'%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
+ERROR = "error"
 # set up the database
 database = {
     "network_key" : bytes.fromhex("31701f12dd93150ec4efce97e381ef06"),
@@ -23,14 +32,14 @@ database = {
     "nodes" : {},
     "frame_counter" : randint(0, 255) 
     }
-
 class ZigbeeSpoofer:
     def __init__(self, frame_provider: FrameProvider):
         self.frame_provider = frame_provider
-        Thread(target=self.spoofing_loop).start()
+        self.done = False
+        self.thread = Thread(target=self.spoofing_loop).start()
         
     def spoofing_loop(self):
-        while True:
+        while not self.done:
             logging.debug("Sending link status and route request")
             link_status_frame = self.frame_provider.link_status(database["pan_id"])
             logging.debug(f"{Fore.BLUE}---> Packet: {link_status_frame.summary()}")
@@ -40,20 +49,20 @@ class ZigbeeSpoofer:
             sendp(route_request_frame, iface="wpan0", verbose=0)
             time.sleep(5)
 
-if __name__ == '__main__':
-    
-    phy=Phy(int.from_bytes(database["extended_source_addr"]), initial_channel=11, pan_id=database["pan_id"],initialize=True, debug_monitor=False)
-
-    fp = FrameProvider()
-    fp.set_security_frame_counter(database["frame_counter"])
-    fp.set_extended_source(database["extended_source_addr"])
-    fp.set_nwk_key(database["network_key"])
-    
-    #link status and route request looper on a 5 second interval:
-    ZigbeeSpoofer(fp)
-    
-    
-    def response_proc(packet: Packet, transaction_sequence: int) -> bool:
+class ZigbeeInjectionClient(SUL):
+    def __init__(self):
+        super().__init__()        
+        self.phy = Phy(int.from_bytes(database["extended_source_addr"]), initial_channel=11, pan_id=database["pan_id"], initialize=True, debug_monitor=False)
+        self.fp = FrameProvider()
+        self.fp.set_security_frame_counter(database["frame_counter"])
+        self.fp.set_extended_source(database["extended_source_addr"])
+        self.fp.set_nwk_key(database["network_key"])
+        
+        #link status and route request looper on a 5 second interval:
+        self.spoofer = ZigbeeSpoofer(self.fp)
+        
+    @staticmethod
+    def response_proc(packet: Packet, transaction_sequence: int) -> Tuple[bool, Packet]:
         if packet is not None and packet.src_addr == database["target_node"]:
             logging.info(f"{Fore.GREEN}<--- Packet: {packet.summary()}")
             if packet.haslayer(ZigbeeNWK) and packet.flags & 16:   
@@ -67,12 +76,86 @@ if __name__ == '__main__':
                 if success:
                     if decrypted_payload.haslayer(ZigbeeClusterLibrary) and decrypted_payload.transaction_sequence == transaction_sequence:
                         logging.info(f"{Fore.YELLOW}decoded frame {decrypted_payload.summary()}")
-                        return True
-
-    while True:
-        read_attributes_frame, transaction_sequence = fp.zcl_read_attributes(0x0, database["pan_id"], database["target_node"])
-        logging.info(f"{Fore.BLUE}---> Packet: {read_attributes_frame.summary()}")
-        Transceiver.send_and_receive(read_attributes_frame, response_proc, sleep_time=2, transaction_sequence_number=transaction_sequence)
-        write_attributes_frame, transaction_sequence = fp.zcl_on_off(0x0, database["pan_id"], database["target_node"], False)
+                        return True, decrypted_payload
+        return False, packet
+    
+    
+    # Model learning-specific methods
+    def default(self):
+        return "invalid input provided"
+        
+    def pre(self):        
+        logging.info("====  Preparation   ====")
+        while self.get_device_state(database["target_node"]) is ERROR:
+            logging.warning(f"{Fore.RED}Retrying to get device state")
+            time.sleep(1)
+        if self.get_device_state(database["target_node"]) is not "ON":
+            logging.debug("Turning on the device")
+            self.set_device_state(database["target_node"], "ON")
+        logging.info("====      Done      ====")
+                
+    def post(self):        
+        logging.info("____Round Done______")
+        pass
+            
+    def step(self, letter):
+        requests = {
+            "turn_on": {"method": self.set_device_state, "args": [database["target_node"], "ON"]},
+            "turn_off": {"method": self.set_device_state, "args": [database["target_node"], "OFF"]},
+            "toggle": {"method": self.set_device_state, "args": [database["target_node"], "TOGGLE"]},
+            "get_state": {"method": self.get_device_state, "args": [database["target_node"]]},
+        }
+        
+        request = requests.get(letter, {"method": self.default})
+        output = request["method"](*request["args"])
+        return output
+    
+    # Device Control Functions
+    def set_device_state(self, device_id: int, state: str):
+        match state:
+            case "ON":
+                status = 0x1
+            case "OFF":
+                status = 0x0
+            case _:
+                status = 0x2
+        write_attributes_frame, transaction_sequence = self.fp.zcl_on_off(0x0, database["pan_id"], device_id, status)
         logging.info(f"{Fore.BLUE}---> Packet: {write_attributes_frame.summary()}")
-        Transceiver.send_and_receive(write_attributes_frame, response_proc, sleep_time=2, transaction_sequence_number=transaction_sequence)
+        response = Transceiver.send_and_receive(write_attributes_frame, ZigbeeInjectionClient.response_proc, sleep_time=2, transaction_sequence_number=transaction_sequence)
+        if response:
+            logging.info(f"{Fore.YELLOW}status: {response.getlayer(ZCLGeneralDefaultResponse).status}")
+            return state
+        return ERROR
+        
+    
+    def get_device_state(self, device_id: int):
+        read_attributes_frame, transaction_sequence = self.fp.zcl_read_attributes(0x0, database["pan_id"], device_id)
+        logging.info(f"{Fore.BLUE}---> Packet: {read_attributes_frame.summary()}")
+        response = Transceiver.send_and_receive(read_attributes_frame, ZigbeeInjectionClient.response_proc, sleep_time=2, transaction_sequence_number=transaction_sequence)
+        if response:
+            logging.info(f"{Fore.YELLOW}attribute value: {response.getlayer(ZCLGeneralReadAttributesResponse).read_attribute_status_record[0].attribute_value}")
+            match response.getlayer(ZCLGeneralReadAttributesResponse).read_attribute_status_record[0].attribute_value:
+                case b'\x00':
+                    return "OFF"
+                case b'\x01':
+                    return "ON"
+        return ERROR
+
+if __name__ == '__main__':
+        
+    alphabet = ["turn_on", "turn_off", "get_state"]#, "permit_join", "forbid_join", "remove_device"]#"toggle", ]
+    sul = ZigbeeInjectionClient()
+        # Usage example for Zigbee2MQTT client
+
+    eq_oracle = StatePrefixEqOracle(alphabet, sul, walks_per_state=2, walk_len=2)
+    #eq_oracle = RandomWalkEqOracle(alphabet, sul, num_steps=5)
+
+    # run the learning algorithm
+    # internal caching is disabled, since we require an error handling for possible non-deterministic behavior
+    learned_model = run_Lstar(alphabet, sul, eq_oracle, automaton_type='mealy',cache_and_non_det_check=True, print_level=3)
+    #learned_model = run_KV(alphabet, sul, eq_oracle, automaton_type='mealy', cache_and_non_det_check=True, print_level=3)
+    
+    #stop the spoofing thread
+    # visualize the automaton
+    visualize_automaton(learned_model, path="learnedModel.pdf", file_type='pdf')
+    sul.spoofer.done = True

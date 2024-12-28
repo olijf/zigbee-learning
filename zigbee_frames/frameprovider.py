@@ -77,11 +77,9 @@ class FrameProvider:
         return  CryptoUtils.zigbee_packet_encrypt(self._nwk_key, unencrypted_part, bytes(frame_payload), extended_source.to_bytes(8, 'big'))
 
 
-    def zcl_on_off(self, src_addr: bytes, dst_pan_id: bytes, dst_addr: bytes, on: bool) -> Packet:
+    def zcl_on_off(self, src_addr: bytes, dst_pan_id: bytes, dst_addr: bytes, on: int) -> Packet:
         extended_source = int.from_bytes(self._extended_source, 'big')
-        if on: cmd_identifier = 0x01
-        else: cmd_identifier = 0x02 #is toggle
-        #data = CryptoUtils.zigbee_packet_encrypt(NWK_KEY, ztest_frame, b'\x01', TI_EXTENDED_SOURCE)
+        cmd_identifier = on
         unencrypted_part = self.dot15d4_data_header(src_addr, dst_pan_id, dst_addr)\
                 /self.zbee_nwk_header(src_addr, dst_addr)\
                 /self.zbee_security_header(extended_source)
