@@ -30,7 +30,9 @@ database = {
     "pan_id" : 0x1a62,
     "target_node" : 0x943f,
     "nodes" : {},
-    "frame_counter" : randint(0, 255) 
+    "wait_time_for_packet_response" : 2,
+    "wait_time_in_between_steps" : 1,
+    "frame_counter" : randint(0, 255)
     }
 class ZigbeeSpoofer:
     def __init__(self, frame_provider: FrameProvider):
@@ -86,10 +88,10 @@ class ZigbeeInjectionClient(SUL):
         
     def pre(self):        
         logging.info("====  Preparation   ====")
-        while self.get_device_state(database["target_node"]) is ERROR:
+        while self.get_device_state(database["target_node"]) == ERROR:
             logging.warning(f"{Fore.RED}Retrying to get device state")
             time.sleep(1)
-        if self.get_device_state(database["target_node"]) is not "ON":
+        if self.get_device_state(database["target_node"]) != "ON":
             logging.debug("Turning on the device")
             self.set_device_state(database["target_node"], "ON")
         logging.info("====      Done      ====")
@@ -108,6 +110,7 @@ class ZigbeeInjectionClient(SUL):
         
         request = requests.get(letter, {"method": self.default})
         output = request["method"](*request["args"])
+        time.sleep(database["wait_time_in_between_steps"])
         return output
     
     # Device Control Functions
@@ -121,7 +124,7 @@ class ZigbeeInjectionClient(SUL):
                 status = 0x2
         write_attributes_frame, transaction_sequence = self.fp.zcl_on_off(0x0, database["pan_id"], device_id, status)
         logging.info(f"{Fore.BLUE}---> Packet: {write_attributes_frame.summary()}")
-        response = Transceiver.send_and_receive(write_attributes_frame, ZigbeeInjectionClient.response_proc, sleep_time=2, transaction_sequence_number=transaction_sequence)
+        response = Transceiver.send_and_receive(write_attributes_frame, ZigbeeInjectionClient.response_proc, sleep_time=database["wait_time_for_packet_response"], transaction_sequence_number=transaction_sequence)
         if response:
             logging.info(f"{Fore.YELLOW}status: {response.getlayer(ZCLGeneralDefaultResponse).status}")
             return state
@@ -131,7 +134,7 @@ class ZigbeeInjectionClient(SUL):
     def get_device_state(self, device_id: int):
         read_attributes_frame, transaction_sequence = self.fp.zcl_read_attributes(0x0, database["pan_id"], device_id)
         logging.info(f"{Fore.BLUE}---> Packet: {read_attributes_frame.summary()}")
-        response = Transceiver.send_and_receive(read_attributes_frame, ZigbeeInjectionClient.response_proc, sleep_time=2, transaction_sequence_number=transaction_sequence)
+        response = Transceiver.send_and_receive(read_attributes_frame, ZigbeeInjectionClient.response_proc, sleep_time=database["wait_time_for_packet_response"], transaction_sequence_number=transaction_sequence)
         if response:
             logging.info(f"{Fore.YELLOW}attribute value: {response.getlayer(ZCLGeneralReadAttributesResponse).read_attribute_status_record[0].attribute_value}")
             match response.getlayer(ZCLGeneralReadAttributesResponse).read_attribute_status_record[0].attribute_value:
@@ -143,7 +146,7 @@ class ZigbeeInjectionClient(SUL):
 
 if __name__ == '__main__':
         
-    alphabet = ["turn_on", "turn_off", "get_state"]#, "permit_join", "forbid_join", "remove_device"]#"toggle", ]
+    alphabet = ["turn_on", "turn_off", "get_state"]#, "toggle"]
     sul = ZigbeeInjectionClient()
         # Usage example for Zigbee2MQTT client
 

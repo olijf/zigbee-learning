@@ -6,7 +6,7 @@ from scapy.layers.zigbee import *
 from util.wpan_interface import Phy
 from util.crypto import CryptoUtils
 import logging
-
+from threading import Event
 
 conf.dot15d4_protocol = 'zigbee'
 conf.debug_match = True
@@ -14,6 +14,7 @@ conf.debug_match = True
 NWK_KEY = bytes.fromhex("31701f12dd93150ec4efce97e381ef06")
 
 PHILIPS_TARGET = bytes.fromhex("00:17:88:01:0b:57:c9:f2".replace(":", ""))
+return_answer = None
 
 class Transceiver:
     @staticmethod
@@ -43,26 +44,31 @@ class Transceiver:
         
         logging.debug(f"Sending packet {frame.summary()} with frame.fc={frame.fc}")
         
+        global return_answer
         return_answer = None
+        event = Event()
         
         if not sleep_time < 0.1:
-            sniffer = AsyncSniffer(iface=iface)
+            def process_packet(packet):
+                expected_frame = Dot15d4(packet.do_build())
+                answers, decoded = process_response_func(expected_frame, transaction_sequence_number)
+                if answers:
+                    global return_answer
+                    return_answer = decoded
+                    event.set()
+                
+            sniffer = AsyncSniffer(iface=iface, prn=process_packet, store=False)
             sniffer.start()
         
         sendp(frame, iface=iface, verbose=0)  # can't use srp because we are not using ethernet
-        time.sleep(sleep_time)  # sleep to give devices time to respond
         
         if not sleep_time < 0.1:
+            # Wait for the event or timeout
+            if event.wait(timeout=sleep_time):
+                sniffer.stop()
+                return return_answer
             sniffer.stop()
-            if len(sniffer.results) > 0:
-                logging.debug("##### Received packets:")
-                for packet in sniffer.results:
-                    expected_frame = Dot15d4(packet.do_build())  # have to do this this way otherwise scapy thinks it's an ethernet packet
-                    answers, decoded = process_response_func(expected_frame, transaction_sequence_number)
-                    if answers:
-                        return decoded
             
-        
         return return_answer
     
     
