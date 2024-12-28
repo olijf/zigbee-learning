@@ -15,35 +15,14 @@ PHILIPS_TARGET = bytes.fromhex("00:17:88:01:0b:57:c9:f2".replace(":", ""))
 
 class Transceiver:
     @staticmethod
-    def process_sniffer_results(results, process_response_func: Callable[[Packet], bool]) -> Packet:
-        """
-        Process the results from the sniffer.
-        
-        :param results: List of packets captured by the sniffer
-        :param process_response_func: Function to process the received packet
-        :return: The first packet that matches the criteria defined by process_response_func, if any
-        """
-        if len(results) > 0:
-            print("##### Received packet:")
-            for packet in results:
-                expected_frame = Dot15d4FCS(packet.do_build())  # have to do this this way otherwise scapy thinks it's an ethernet packet
-                expected_frame.summary()
-                if expected_frame.haslayer(ZigbeeSecurityHeader):
-                    decrypted, status = CryptoUtils.zigbee_packet_decrypt(NWK_KEY, expected_frame, PHILIPS_TARGET)
-                    if status:
-                        decrypted.show()
-                if process_response_func(expected_frame):
-                    return expected_frame
-        return None
-
-    @staticmethod
     def send_and_receive(
         frame: Packet,
-        process_response_func: Callable[[Packet], bool]=lambda x: x.haslayer(ZigbeeAppDataPayload),
+        process_response_func: Callable[[Packet, int], bool]=lambda x, _: x.haslayer(ZigbeeAppDataPayload),
         chan: int=11,
         phy: Phy=None,
         iface: str = "wpan0",
-        sleep_time: float = 1.0
+        sleep_time: float = 1.0,
+        transaction_sequence_number: int = 0
     ) -> Tuple[Packet, int]:
         """
         Generic function to send a packet and receive a response.
@@ -58,10 +37,9 @@ class Transceiver:
         """
         if phy:
             phy.switch_channel(chan)
-        time.sleep(0.1)
-        print(f"Sending on channel {chan}")
+            print(f"Sending on channel {chan}")
         
-        print(f"Sending packet {frame} with frame.fc={frame.fc}")
+        print(f"Sending packet {frame.summary()} with frame.fc={frame.fc}")
         
         return_answer = None
         
@@ -74,7 +52,13 @@ class Transceiver:
         
         if not sleep_time < 0.1:
             sniffer.stop()
-            return_answer = Transceiver.process_sniffer_results(sniffer.results, process_response_func)
+            if len(sniffer.results) > 0:
+                print("##### Received packets:")
+                for packet in sniffer.results:
+                    expected_frame = Dot15d4(packet.do_build())  # have to do this this way otherwise scapy thinks it's an ethernet packet
+                    if process_response_func(expected_frame, transaction_sequence_number):
+                        return expected_frame
+            
         
         return return_answer
     

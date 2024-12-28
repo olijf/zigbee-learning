@@ -162,12 +162,15 @@ if __name__ == '__main__':
     # Example usage of the CryptoUtils
     from scapy.all import rdpcap
     key = bytes.fromhex('6be7b689289b1b9c353a38f8b54ffd06')
-    frames = rdpcap('factory_reset_met_behulp_van_scapy.pcapng')
-    frames[11].show()
-    extended_source = frames[11].ext_src.to_bytes(8, 'big')
+    NWK_KEY = bytes.fromhex("31701f12dd93150ec4efce97e381ef06")
+    key = NWK_KEY
+    PHILIPS_TARGET = bytes.fromhex("00:17:88:01:0b:57:c9:f2".replace(":", ""))
+    frames = rdpcap('test-capture.pcap')
+    frames[65].show()
+    extended_source = PHILIPS_TARGET #frames[66].ext_src.to_bytes(8, 'big')
     print(f"extended_source = {extended_source.hex(':')}")
     print(f"key = {key.hex(' ')}")
-    payload, succes = CryptoUtils.zigbee_packet_decrypt(key, frames[11], extended_source)
+    payload, succes = CryptoUtils.zigbee_packet_decrypt(key, frames[65], extended_source)
     if succes:
         print('Decrypted packet:')
         payload.show()
