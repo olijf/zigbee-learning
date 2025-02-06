@@ -1,0 +1,32 @@
+permit_join: true
+mqtt:
+  base_topic: zigbee2mqtt
+  server: mqtt://eclipse-mosquitto
+serial:
+  port: /dev/ttyACM0
+frontend:
+  port: 8080
+advanced:
+  log_level: debug
+  network_key:
+    - 49
+    - 112
+    - 31
+    - 18
+    - 221
+    - 147
+    - 21
+    - 14
+    - 196
+    - 239
+    - 206
+    - 151
+    - 227
+    - 129
+    - 239
+    - 6
+  homeassistant_legacy_entity_attributes: false
+  legacy_api: false
+  legacy_availability_payload: false
+device_options:
+  legacy: false

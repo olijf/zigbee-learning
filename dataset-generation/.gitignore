@@ -1,0 +1,4 @@
+zigbee2mqtt-data/*
+mosquitto-data/*
+!mosquitto-data/.keep
+!zigbee2mqtt-data/configuration.yaml
