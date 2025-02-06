@@ -1,7 +1,7 @@
 from random import randint
 from scapy.all import Packet
-from scapy.layers.dot15d4 import Dot15d4, Dot15d4Data
-from scapy.layers.zigbee import ZigbeeNWK, ZigbeeSecurityHeader, ZigbeeAppDataPayload, ZigbeeClusterLibrary, ZCLGeneralReadAttributes, ZCLGeneralReadAttributesResponse, ZCLReadAttributeStatusRecord, ZigbeeNWKCommandPayload
+from scapy.layers.dot15d4 import Dot15d4, Dot15d4Data, Dot15d4Beacon
+from scapy.layers.zigbee import ZigbeeNWK, ZigbeeSecurityHeader, ZigbeeAppDataPayload, ZigbeeClusterLibrary, ZCLGeneralReadAttributes, ZCLGeneralReadAttributesResponse, ZCLReadAttributeStatusRecord, ZigbeeNWKCommandPayload, LinkStatusEntry, ZigBeeBeacon
 from util.crypto import CryptoUtils
 import logging
 
@@ -32,6 +32,11 @@ class FrameProvider:
         self._dot15d4_sequence_number = (self._dot15d4_sequence_number + 1) % 256
         return Dot15d4(seqnum=self._dot15d4_sequence_number , fcf_frametype='Data', fcf_panidcompress=True, fcf_ackreq=ackreq, fcf_srcaddrmode='Short', fcf_destaddrmode='Short')\
                 /Dot15d4Data(dest_panid=dst_pan_id, dest_addr=dst_addr, src_addr=src_addr)
+    
+    def dot15d4_beacon(self, src_panid, src_addr):
+        self._dot15d4_sequence_number = (self._dot15d4_sequence_number + 1) % 256
+        return Dot15d4(seqnum=self._dot15d4_sequence_number, fcf_frametype='Beacon', fcf_panidcompress=False,  fcf_srcaddrmode='Short', fcf_destaddrmode='None')\
+                /Dot15d4Beacon(src_panid=src_panid, src_addr=src_addr, sf_pancoord=1, gts_spec_permit=0)
 
     def zbee_nwk_header(self, source, destination, extended_source=None, ftype='data'):
         nwk_seq = self._zigbee_nwk_sequence_number
@@ -65,7 +70,7 @@ class FrameProvider:
                 /self.zbee_nwk_header(0x0000, nwk_dst, extended_source, 'command')\
                 /self.zbee_security_header(extended_source)
         
-        frame_payload = ZigbeeNWKCommandPayload(cmd_identifier=1, multicast=0, dest_addr_bit=0, many_to_one=2, destination_address=nwk_dst, path_cost=0)
+        frame_payload = ZigbeeNWKCommandPayload(cmd_identifier=1, multicast=0, dest_addr_bit=0, many_to_one=2, destination_address=0xfffc, path_cost=1, route_request_identifier=8)
         return  CryptoUtils.zigbee_packet_encrypt(self._nwk_key, unencrypted_part, bytes(frame_payload), extended_source.to_bytes(8, 'big'))
 
     def link_status(self, dst_pan_id: bytes) -> Packet:
@@ -73,9 +78,16 @@ class FrameProvider:
         unencrypted_part = self.dot15d4_data_header(0x0000, dst_pan_id, 0xffff, ackreq=False)\
                 /self.zbee_nwk_header(0x0000, 0xfffc, extended_source, 'command')\
                 /self.zbee_security_header(extended_source)
-        frame_payload = ZigbeeNWKCommandPayload(cmd_identifier=0x08, multicast=0, dest_addr_bit=0, many_to_one=0, destination_address=0xfffd, path_cost=0)
+        frame_payload = ZigbeeNWKCommandPayload(cmd_identifier=0x08, multicast=0, dest_addr_bit=0, many_to_one=0, destination_address=0xfffc, path_cost=0, first_frame=True, last_frame=True, entry_count=0, link_status_list=[])
         return  CryptoUtils.zigbee_packet_encrypt(self._nwk_key, unencrypted_part, bytes(frame_payload), extended_source.to_bytes(8, 'big'))
 
+    def copy_device_annouce(self, received_announce: Packet, dst_pan_id: bytes, dst_addr: bytes) -> Packet:
+        extended_source = int.from_bytes(self._extended_source, 'big')
+        unencrypted_part = self.dot15d4_data_header(0x0000, dst_pan_id, dst_addr, ackreq=False)\
+                /self.zbee_nwk_header(0x0000, dst_addr, extended_source, 'command')\
+                /self.zbee_security_header(extended_source)
+        frame_payload = received_announce
+        return CryptoUtils.zigbee_packet_encrypt(self._nwk_key, unencrypted_part, bytes(frame_payload), extended_source.to_bytes(8, 'big'))
 
     def zcl_on_off(self, src_addr: bytes, dst_pan_id: bytes, dst_addr: bytes, on: int) -> Packet:
         extended_source = int.from_bytes(self._extended_source, 'big')
@@ -89,4 +101,10 @@ class FrameProvider:
         frame_payload = ZigbeeAppDataPayload(frame_control='', delivery_mode='unicast', aps_frametype='data', dst_endpoint=11, cluster=0x6, profile='HA_Home_Automation', src_endpoint=1, counter=self._zigbee_apl_counter)\
                 /ZigbeeClusterLibrary(reserved=0, disable_default_response=0, command_direction=0, manufacturer_specific=0, zcl_frametype='cluster-specific', transaction_sequence=self._zigbee_zcl_sequence_number, command_identifier=cmd_identifier)
         return CryptoUtils.zigbee_packet_encrypt(self._nwk_key, unencrypted_part, bytes(frame_payload), extended_source.to_bytes(8, 'big')), self._zigbee_zcl_sequence_number
-        
+    
+    def beacon(self, src_pan_id: bytes, src_addr: bytes, extended_pan_id: bytes) -> Packet:
+        extended_source = int.from_bytes(extended_pan_id, 'big')
+        unencrypted_part = self.dot15d4_beacon(src_pan_id, src_addr)\
+            /ZigBeeBeacon(nwkc_protocol_version=2, stack_profile=2,end_device_capacity=1, router_capacity=1, 
+            extended_pan_id=extended_source, tx_offset = 16777215)
+        return unencrypted_part
