@@ -3,6 +3,8 @@ This repo contains the experiments for my thesis project. The goal is to employ 
 
 This work relies heavely on Scapy and other tooling.
 
+Inspired by [Andrea Pferscher's work on BLE Model learning](https://github.com/apferscher/ble-learning)
+
 We have explored two options in our experiments:
 1. **Zigbee2MQTT**: A popular open-source Zigbee to MQTT bridge that allows you to control Zigbee devices from your home automation system.
 2. **WPAN (IEEE 802.15.4)**: A low-rate wireless personal area network (LR-WPAN) that can be hacked to speak Zigbee. 
