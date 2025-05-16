@@ -1,6 +1,8 @@
 # Zigbee Learning
 This repo contains the experiments for my thesis project. The goal is to employ machine learning to create a model of a Zigbee device. 
 
+A public version is available online at [https://github.com/olijf/zigbee-learning/](https://github.com/olijf/zigbee-learning/)
+
 This work relies heavely on Scapy and other tooling.
 
 Inspired by [Andrea Pferscher's work on BLE Model learning](https://github.com/apferscher/ble-learning)
