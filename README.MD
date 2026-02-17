@@ -1,7 +1,9 @@
 # Zigbee Learning
 This repo contains the experiments for my thesis project. The goal is to employ machine learning to create a model of a Zigbee device. 
 
-A public version is available online at [https://github.com/olijf/zigbee-learning/](https://github.com/olijf/zigbee-learning/)
+My thesis can be downloaded here at the [https://research.ou.nl/en/studentTheses/automata-learning-for-behavioural-mapping-of-zigbee-devices/](OU Research portal)
+
+A public version of this repo is available online at [https://github.com/olijf/zigbee-learning/](https://github.com/olijf/zigbee-learning/)
 
 This work relies heavely on Scapy and other tooling.
 
